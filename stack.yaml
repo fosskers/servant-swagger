@@ -1,14 +1,5 @@
-# resolver: lts-13.25
-# resolver: lts-12.26
-resolver: lts-12.0
+resolver: lts-13.25
 
 packages:
 - '.'
 - example/
-
-extra-deps:
-  - github: fosskers/servant
-    commit: c9472671e8dceb07891509a998614687d1843629
-    subdirs:
-      - servant
-      - servant-server
