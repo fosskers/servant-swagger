@@ -1,5 +1,14 @@
-resolver: lts-13.25
+# resolver: lts-13.25
+resolver: lts-12.26
 
 packages:
 - '.'
 - example/
+
+extra-deps:
+  - aeson-1.4.3.0
+  - github: fosskers/servant
+    commit: c9472671e8dceb07891509a998614687d1843629
+    subdirs:
+      - servant
+      - servant-server
