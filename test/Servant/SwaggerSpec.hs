@@ -1,31 +1,31 @@
-{-# LANGUAGE CPP #-}
+{-# LANGUAGE CPP                #-}
 {-# LANGUAGE DataKinds          #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE QuasiQuotes        #-}
 {-# LANGUAGE TypeOperators      #-}
-{-# LANGUAGE PackageImports     #-}
+
 module Servant.SwaggerSpec where
 
 import           Control.Lens
-import           Data.Aeson       (ToJSON(toJSON), Value, genericToJSON)
-import           Data.Aeson.QQ.Simple
+import           Data.Aeson
+    (ToJSON(..), Value, decodeFileStrict', genericToJSON)
 import qualified Data.Aeson.Types as JSON
-import           Data.Char        (toLower)
-import           Data.Int         (Int64)
+import           Data.Char (toLower)
+import           Data.Int (Int64)
+import           Data.Maybe (fromJust)
 import           Data.Proxy
 import           Data.Swagger
-import           Data.Text        (Text)
+import           Data.Text (Text)
 import           Data.Time
 import           GHC.Generics
 import           Servant.API
 import           Servant.Swagger
 import           Servant.Test.ComprehensiveAPI (comprehensiveAPI)
-import           Test.Hspec       hiding (example)
+import           Test.Hspec hiding (example)
 
 #if !MIN_VERSION_swagger2(2,4,0)
-import           Data.Aeson.Lens   (key, _Array)
+import           Data.Aeson.Lens (key, _Array)
 import qualified Data.Vector as V
 #endif
 
@@ -37,9 +37,15 @@ checkSwagger swag js = toJSON swag `shouldBe` js
 
 spec :: Spec
 spec = describe "HasSwagger" $ do
-  it "Todo API" $ checkAPI (Proxy :: Proxy TodoAPI) todoAPI
-  it "Hackage API (with tags)" $ checkSwagger hackageSwaggerWithTags hackageAPI
-  it "GetPost API (test subOperations)" $ checkSwagger getPostSwagger getPostAPI
+  it "Todo API" $ do
+    todo <- todoAPI
+    checkAPI (Proxy :: Proxy TodoAPI) todo
+  it "Hackage API (with tags)" $ do
+    hackage <- hackageAPI
+    checkSwagger hackageSwaggerWithTags hackage
+  it "GetPost API (test subOperations)" $ do
+    getPost <- getPostAPI
+    checkSwagger getPostSwagger getPost
   it "Comprehensive API" $ do
     let _x = toSwagger comprehensiveAPI
     True `shouldBe` True -- type-level test
@@ -65,65 +71,8 @@ instance ToParamSchema TodoId
 
 type TodoAPI = "todo" :> Capture "id" TodoId :> Get '[JSON] Todo
 
-todoAPI :: Value
-todoAPI = [aesonQQ|
-{
-  "swagger":"2.0",
-  "info":
-    {
-      "title": "",
-      "version": ""
-    },
-  "definitions":
-    {
-      "Todo":
-        {
-          "type": "object",
-          "required": [ "created", "title" ],
-          "properties":
-            {
-              "created": { "$ref": "#/definitions/UTCTime" },
-              "title": { "type": "string" },
-              "summary": { "type": "string" }
-            }
-        },
-      "UTCTime":
-        {
-          "type": "string",
-          "format": "yyyy-mm-ddThh:MM:ssZ",
-          "example": "2016-07-22T00:00:00Z"
-        }
-    },
-  "paths":
-    {
-      "/todo/{id}":
-        {
-          "get":
-            {
-              "responses":
-                {
-                  "200":
-                    {
-                      "schema": { "$ref":"#/definitions/Todo" },
-                      "description": ""
-                    },
-                  "404": { "description": "`id` not found" }
-                },
-              "produces": [ "application/json;charset=utf-8" ],
-              "parameters":
-                [
-                  {
-                    "required": true,
-                    "in": "path",
-                    "name": "id",
-                    "type": "string"
-                   }
-                ]
-            }
-        }
-    }
-}
-|]
+todoAPI :: IO Value
+todoAPI = fromJust <$> decodeFileStrict' "test/todoAPI.json"
 
 -- =======================================================================
 -- Hackage API
@@ -182,160 +131,8 @@ hackageSwaggerWithTags = toSwagger (Proxy :: Proxy HackageAPI)
     usersOps    = subOperations (Proxy :: Proxy HackageUserAPI)     (Proxy :: Proxy HackageAPI)
     packagesOps = subOperations (Proxy :: Proxy HackagePackagesAPI) (Proxy :: Proxy HackageAPI)
 
-hackageAPI :: Value
-hackageAPI = modifyValue [aesonQQ|
-{
-   "swagger":"2.0",
-   "host":"hackage.haskell.org",
-   "info":{
-      "version":"",
-      "title":""
-   },
-   "definitions":{
-      "UserDetailed":{
-         "required":[
-            "username",
-            "userid",
-            "groups"
-         ],
-         "type":"object",
-         "properties":{
-            "groups":{
-               "items":{
-                  "type":"string"
-               },
-               "type":"array"
-            },
-            "username":{
-               "type":"string"
-            },
-            "userid":{
-               "maximum":9223372036854775807,
-               "minimum":-9223372036854775808,
-               "type":"integer",
-               "format":"int64"
-            }
-         }
-      },
-      "Package":{
-         "required":[
-            "packageName"
-         ],
-         "type":"object",
-         "properties":{
-            "packageName":{
-               "type":"string"
-            }
-         }
-      },
-      "UserSummary":{
-         "required":[
-            "username",
-            "userid"
-         ],
-         "type":"object",
-         "properties":{
-            "username":{
-               "type":"string"
-            },
-            "userid":{
-               "maximum":9223372036854775807,
-               "minimum":-9223372036854775808,
-               "type":"integer",
-               "format":"int64"
-            }
-         },
-         "example":{
-            "username": "JohnDoe",
-            "userid": 123
-         }
-      }
-   },
-   "paths":{
-      "/users":{
-         "get":{
-            "responses":{
-               "200":{
-                  "schema":{
-                     "items":{
-                        "$ref":"#/definitions/UserSummary"
-                     },
-                     "type":"array"
-                  },
-                  "description":""
-               }
-            },
-            "produces":[
-               "application/json;charset=utf-8"
-            ],
-            "tags":[
-               "users"
-            ]
-         }
-      },
-      "/packages":{
-         "get":{
-            "responses":{
-               "200":{
-                  "schema":{
-                     "items":{
-                        "$ref":"#/definitions/Package"
-                     },
-                     "type":"array"
-                  },
-                  "description":""
-               }
-            },
-            "produces":[
-               "application/json;charset=utf-8"
-            ],
-            "tags":[
-               "packages"
-            ]
-         }
-      },
-      "/user/{username}":{
-         "get":{
-            "responses":{
-               "404":{
-                  "description":"`username` not found"
-               },
-               "200":{
-                  "schema":{
-                     "$ref":"#/definitions/UserDetailed"
-                  },
-                  "description":""
-               }
-            },
-            "produces":[
-               "application/json;charset=utf-8"
-            ],
-            "parameters":[
-               {
-                  "required":true,
-                  "in":"path",
-                  "name":"username",
-                  "type":"string"
-               }
-            ],
-            "tags":[
-               "users"
-            ]
-         }
-      }
-   },
-   "tags":[
-      {
-         "name":"users",
-         "description":"Operations about user"
-      },
-      {
-         "name":"packages",
-         "description":"Query packages"
-      }
-   ]
-}
-|]
+hackageAPI :: IO Value
+hackageAPI = modifyValue . fromJust <$> decodeFileStrict' "test/hackageAPI.json"
   where
     modifyValue :: Value -> Value
 #if MIN_VERSION_swagger2(2,4,0)
@@ -362,47 +159,5 @@ getPostSwagger = toSwagger (Proxy :: Proxy GetPostAPI)
     getOps :: Traversal' Swagger Operation
     getOps = subOperations (Proxy :: Proxy (Get '[JSON] String)) (Proxy :: Proxy GetPostAPI)
 
-getPostAPI :: Value
-getPostAPI = [aesonQQ|
-{
-   "swagger":"2.0",
-   "info":{
-      "version":"",
-      "title":""
-   },
-   "paths":{
-      "/":{
-         "post":{
-            "responses":{
-               "200":{
-                  "schema":{
-                     "type":"string"
-                  },
-                  "description":""
-               }
-            },
-            "produces":[ "application/json;charset=utf-8" ]
-         },
-         "get":{
-            "responses":{
-               "200":{
-                  "schema":{
-                     "type":"string"
-                  },
-                  "description":""
-               }
-            },
-            "produces":[ "application/json;charset=utf-8" ],
-            "tags":[ "get" ]
-         }
-      }
-   },
-   "tags":[
-      {
-         "name":"get",
-         "description":"GET operations"
-      }
-   ]
-}
-|]
-
+getPostAPI :: IO Value
+getPostAPI = fromJust <$> decodeFileStrict' "test/getPostAPI.json"

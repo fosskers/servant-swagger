@@ -1,0 +1,56 @@
+{
+  "swagger":"2.0",
+  "info":
+    {
+      "title": "",
+      "version": ""
+    },
+  "definitions":
+    {
+      "Todo":
+        {
+          "type": "object",
+          "required": [ "created", "title" ],
+          "properties":
+            {
+              "created": { "$ref": "#/definitions/UTCTime" },
+              "title": { "type": "string" },
+              "summary": { "type": "string" }
+            }
+        },
+      "UTCTime":
+        {
+          "type": "string",
+          "format": "yyyy-mm-ddThh:MM:ssZ",
+          "example": "2016-07-22T00:00:00Z"
+        }
+    },
+  "paths":
+    {
+      "/todo/{id}":
+        {
+          "get":
+            {
+              "responses":
+                {
+                  "200":
+                    {
+                      "schema": { "$ref":"#/definitions/Todo" },
+                      "description": ""
+                    },
+                  "404": { "description": "`id` not found" }
+                },
+              "produces": [ "application/json;charset=utf-8" ],
+              "parameters":
+                [
+                  {
+                    "required": true,
+                    "in": "path",
+                    "name": "id",
+                    "type": "string"
+                   }
+                ]
+            }
+        }
+    }
+}

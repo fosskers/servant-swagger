@@ -1,0 +1,40 @@
+{
+   "swagger":"2.0",
+   "info":{
+      "version":"",
+      "title":""
+   },
+   "paths":{
+      "/":{
+         "post":{
+            "responses":{
+               "200":{
+                  "schema":{
+                     "type":"string"
+                  },
+                  "description":""
+               }
+            },
+            "produces":[ "application/json;charset=utf-8" ]
+         },
+         "get":{
+            "responses":{
+               "200":{
+                  "schema":{
+                     "type":"string"
+                  },
+                  "description":""
+               }
+            },
+            "produces":[ "application/json;charset=utf-8" ],
+            "tags":[ "get" ]
+         }
+      }
+   },
+   "tags":[
+      {
+         "name":"get",
+         "description":"GET operations"
+      }
+   ]
+}
